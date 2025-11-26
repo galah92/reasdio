@@ -91,10 +91,37 @@ class Encoder:
         """Output embedding dimension"""
 ```
 
+## Quick Start
+
+```bash
+# Install dependencies
+uv sync
+
+# Run quick training (500 steps, ~15 min on L4 GPU)
+PYTHONPATH=. uv run python scripts/quick_train.py
+
+# Benchmark training speed
+PYTHONPATH=. uv run python scripts/benchmark.py --batch-size 64
+
+# Evaluate a checkpoint
+PYTHONPATH=. uv run python scripts/eval.py --checkpoint checkpoints/htsat/quick_train.pt --encoder htsat --test-json data/reasonaqa/clotho_train.json
+```
+
+## Current Status
+
+- [x] Data pipeline (ReasonAQA JSONs + audio loading)
+- [x] HTSAT encoder integration
+- [x] Mapper architecture (Linear → GELU → Linear)
+- [x] Training loop with evaluation
+- [x] **Quick training shows signal**: Loss 3.81 → 2.24, Accuracy 0.2% → 99.4%
+- [ ] Mimi encoder integration
+- [ ] Full training run
+- [ ] Test set evaluation
+
 ## Implementation Order
 
-1. **Data**: Load ReasonAQA JSONs + audio files, verify batching works
-2. **HTSAT baseline**: Encoder → Mapper → SmolLM2, train until loss decreases
+1. **Data**: Load ReasonAQA JSONs + audio files, verify batching works ✓
+2. **HTSAT baseline**: Encoder → Mapper → SmolLM2, train until loss decreases ✓
 3. **Mimi encoder**: Swap encoder, same training, compare results
 4. **Evaluate**: Accuracy on test set, breakdown by question type
 
