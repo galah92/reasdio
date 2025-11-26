@@ -1,0 +1,21 @@
+[project]
+name = "reasdio"
+version = "0.1.0"
+description = "Codec representations for audio reasoning"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "torch",
+    "torchaudio",
+    "transformers",
+    "msclap",
+    "sentencepiece>=0.2.1",
+    "moshi",
+]
+
+[project.scripts]
+train = "scripts.train:main"
+eval = "scripts.eval:main"
+
+[tool.uv]
+override-dependencies = ["sentencepiece>=0.2.1"]
