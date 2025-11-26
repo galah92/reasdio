@@ -2,6 +2,19 @@
 
 **Research Question**: Does codec-based audio representation (Mimi) outperform classifier-based (HTSAT) for audio reasoning tasks?
 
+## Comparison to Mellow (Baseline)
+
+[Mellow](https://arxiv.org/abs/2503.08540) is the SoTA small audio-language model for reasoning:
+
+| Model | Params | ReasonAQA | MMAU | Audio Encoder |
+|-------|--------|-----------|------|---------------|
+| Mellow | 167M | **77.0%** | 52.1 | HTSAT (frozen) |
+| Qwen2-Audio | 8B | - | 52.5 | - |
+| WavLLM | 3B | 59.5% | - | - |
+| **Ours (Mimi)** | ~167M | ? | ? | Mimi codec |
+
+**Our hypothesis**: Replacing HTSAT with Mimi codec preserves acoustic details (reverb, timbre, recording quality) that help with reasoning questions about environment, setting, and acoustic properties.
+
 ## Task
 
 **Input**: Audio file(s) + text question  
@@ -111,12 +124,75 @@ PYTHONPATH=. uv run python scripts/eval.py --checkpoint checkpoints/htsat/quick_
 
 - [x] Data pipeline (ReasonAQA JSONs + audio loading)
 - [x] HTSAT encoder integration
+- [x] Mimi encoder integration (semantic + full modes)
 - [x] Mapper architecture (Linear → GELU → Linear)
 - [x] Training loop with evaluation
-- [x] **Quick training shows signal**: Loss 3.81 → 2.24, Accuracy 0.2% → 99.4%
-- [ ] Mimi encoder integration
+- [x] **Quick training shows signal**: Loss 3.81 → 2.24
 - [ ] Full training run
 - [ ] Test set evaluation
+- [ ] Encoder comparison experiments
+
+## Validating Mimi vs HTSAT Hypothesis
+
+**Hypothesis**: Mimi's acoustic details (reverb, timbre, recording quality) help with audio *reasoning* tasks that HTSAT's classification features miss.
+
+### What Each Encoder Contains
+
+| Encoder | Output Dim | Contains | Discards |
+|---------|-----------|----------|----------|
+| HTSAT | 768 | Sound event classification features | Acoustic details |
+| Mimi semantic | 512 | Coarse content (what) | Fine acoustic details |
+| Mimi full | 512 | Full reconstruction info (what + how) | Nothing |
+
+### Validation Approaches
+
+1. **Probing Experiment** - Train linear probes on frozen encoder outputs to predict:
+   - Room type (indoor/outdoor) from reverb
+   - Recording quality (professional/amateur)
+   - Background noise level
+   - Distance to sound source
+
+   *Expected*: Mimi full > Mimi semantic > HTSAT
+
+2. **Question Type Ablation** - Compare accuracy by question category:
+   | Question Type | Needs Acoustics? | Expect Mimi Wins? |
+   |--------------|------------------|-------------------|
+   | "What sound is this?" | No | Similar |
+   | "What is the environment?" | Yes | **Yes** |
+   | "Is this indoor or outdoor?" | Yes | **Yes** |
+   | "Describe the recording quality" | Yes | **Yes** |
+
+3. **Reconstruction Sanity Check** - Mimi can reconstruct audio from codes; HTSAT cannot (by design)
+
+### Relevant Data in ReasonAQA
+
+The train.json (968k samples) includes acoustic reasoning questions:
+- "What is the acoustic environment like?"
+- "What can be inferred about the environment from the audio?"
+- "What is the likely environment or setting for this audio clip?"
+- "Is this sound typical of a specific environment?"
+
+These questions require understanding reverb, background noise, and recording characteristics - exactly what Mimi should capture better than HTSAT.
+
+### ReasonAQA Question Categories
+
+| Category | Count | % | Mimi Advantage? |
+|----------|-------|---|-----------------|
+| MCQ (A/B/C/D) | 348k | 36% | Clean eval metric |
+| Compare (dual audio) | 204k | 21% | Acoustic differences |
+| Sound Event ID | 194k | 20% | Similar to HTSAT |
+| **Acoustic Properties** | 122k | 12.6% | **Yes** - frequency, loudness, timbre |
+| **Emotional/Mood** | 43k | 4.5% | **Yes** - atmosphere |
+| **Environment/Setting** | 25k | 2.5% | **Yes** - reverb, room acoustics |
+| Yes/No | 14k | 1.5% | Clean eval metric |
+
+**Key insight**: ~190k samples (20%) ask about acoustic properties, mood, or environment - exactly where Mimi should outperform HTSAT.
+
+### Evaluation Strategy
+
+1. **Overall ReasonAQA accuracy** - Compare to Mellow's 77.0%
+2. **Category breakdown** - Expect Mimi wins on acoustic/environment questions
+3. **Per-question-type analysis** - Identify where codec helps most
 
 ## Implementation Order
 
